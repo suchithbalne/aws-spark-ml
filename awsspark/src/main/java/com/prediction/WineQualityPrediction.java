@@ -20,19 +20,39 @@ import java.io.IOException;
 
 public class WineQualityPrediction {
     public static void main(String[] args) {
+        String trainingDataPath = "";
+        String testDataPath = "";
+        String outputPath = "";
+        if (args.length > 3) {
+            System.err.println("Usage: WineQualityPrediction <path-to-training-data> <path-to-test-data>");
+            System.exit(1);
+        } else if(args.length ==3){
+            trainingDataPath = args[0];
+            testDataPath = args[1];
+            outputPath = args[2] + "model";
+        } else{
+            trainingDataPath = "s3://njit-cs643-pa2/TrainingDataset.csv";
+            testDataPath = "s3://njit-cs643-pa2/ValidationDataset.csv";
+            outputPath = "s3://njit-cs643-pa2/model";
+        
+        }
         
         SparkSession spark = SparkSession.builder()
         .appName("WineQualityPrediction")
+        .config("spark.master", "local")
         .getOrCreate();
         
+        // Create a JavaSparkContext object from the SparkSession object.
         JavaSparkContext jsc = new JavaSparkContext(spark.sparkContext());
+        spark.sparkContext().setLogLevel("ERROR");
+
         
         // Load and parse the training data file from AWS S3, converting it to a DataFrame.
         Dataset<Row> trainingData = spark.read().format("csv")
         .option("header", true)
         .option("quote", "\"") // handle escaped quotes
         .option("delimiter", ";")
-        .load("s3://njit-cs643-pa2/TrainingDataset.csv");
+        .load(trainingDataPath);
         //Dataset<Row> trainingData = spark.read().format("csv").option("header", "true").option("inferSchema", "true").option("delimiter", ";").load("s3://njit-cs643-pa2/TrainingDataset.csv");
         
         
@@ -44,7 +64,7 @@ public class WineQualityPrediction {
         .option("header", true)
         .option("quote", "\"") // handle escaped quotes
         .option("delimiter", ";")
-        .load("s3://njit-cs643-pa2/ValidationDataset.csv");
+        .load(testDataPath);
 
         // Prepare training data from a list of (label, features) tuples.
         String[] inputColumns = {"fixed acidity", "volatile acidity", "citric acid", "chlorides", "total sulfur dioxide", "density", "sulphates", "alcohol"};
@@ -106,7 +126,7 @@ public class WineQualityPrediction {
         System.out.println("Test F1 Score = " + f1Score);
         
         try {
-            model.write().overwrite().save("s3://njit-cs643-pa2/model");
+            model.write().overwrite().save(outputPath);
         } catch (IOException e) {
             System.err.println("Failed to save the model: " + e.getMessage());
         }
