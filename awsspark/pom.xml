@@ -26,11 +26,6 @@
         <artifactId>spark-mllib_2.12</artifactId>
         <version>3.2.0</version>
     </dependency>
-    <dependency>
-      <groupId>com.microsoft.ml.lightgbm</groupId>
-      <artifactId>lightgbmlib</artifactId>
-      <version>3.3.510</version>
-  </dependency>
     </dependencies>
 
   <build>
@@ -55,10 +50,10 @@
             <configuration>
               <archive>
                 <manifest>
-                  <mainClass>com.prediction.WineQualityPrediction</mainClass>
+                  <mainClass>com.prediction.Sparkproject</mainClass>
                 </manifest>
               </archive>
-              <finalName>WineQualityPrediction</finalName>
+              <finalName>Sparkproject</finalName>
               <appendAssemblyId>false</appendAssemblyId>
             </configuration>
           </execution>

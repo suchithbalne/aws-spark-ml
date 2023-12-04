@@ -1,4 +1,4 @@
-package com.prediction;
+package org.project;
 
 import org.apache.spark.sql.functions;
 import org.apache.spark.api.java.JavaSparkContext;
@@ -13,30 +13,27 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import java.io.IOException;
 
-/*
- * Java program to read the training and testing data from AWS S3 and train a Random Forest model to predict the quality of the wine.
- * @author Suchith Sameeri Balne
- */
 
-public class WineQualityPrediction {
+public class SparkProject {
     public static void main(String[] args) {
         String trainingDataPath = "";
         String testDataPath = "";
         String outputPath = "";
         if (args.length > 3) {
-            System.err.println("Usage: WineQualityPrediction <path-to-training-data> <path-to-test-data>");
+            System.err.println("Error occured");
             System.exit(1);
         } else if(args.length ==3){
             trainingDataPath = args[0];
             testDataPath = args[1];
             outputPath = args[2] + "model";
         } else{
-            trainingDataPath = "s3://njit-cs643-pa2/TrainingDataset.csv";
-            testDataPath = "s3://njit-cs643-pa2/ValidationDataset.csv";
-            outputPath = "s3://njit-cs643-pa2/model";
+            trainingDataPath = "s3://pg495/TrainingDataset.csv";
+            testDataPath = "s3://pg495/ValidationDataset.csv";
+            outputPath = "s3://pg495/Test.model";
         
         }
         
+        //Spark session
         SparkSession spark = SparkSession.builder()
         .appName("WineQualityPrediction")
         .config("spark.master", "local")
@@ -96,10 +93,10 @@ public class WineQualityPrediction {
         .setLabelCol("quality")
         .setFeaturesCol("features")
         .setNumTrees(150)
-        .setMaxBins(8)
+        .setMaxBins(10)
         .setMaxDepth(15)
         .setSeed(150)
-        .setImpurity("gini");
+        .setImpurity("entropy");
         
         // Configure an ML pipeline, which consists of assembler and random forest classifier.
         Pipeline pipeline = new Pipeline().setStages(new PipelineStage[]{assembler, rf});
@@ -107,24 +104,28 @@ public class WineQualityPrediction {
         // Train model. This also runs the assembler.
         PipelineModel model = pipeline.fit(trainingData);
         
+        System.out.println(model);
+        
         // Make predictions.
         Dataset<Row> predictions = model.transform(testData);
         
         // Selecting rows to display.
-        predictions.select("prediction", "quality", "features").show(5);
+        //predictions.select("prediction", "quality", "features").show(5);
         
         // Selecting (prediction, true label).
         MulticlassClassificationEvaluator mcevaluator = new MulticlassClassificationEvaluator()
         .setLabelCol("quality")
         .setPredictionCol("prediction");
         
+        System.out.println(mcevaluator);
+        
         double accuracy = mcevaluator.setMetricName("accuracy").evaluate(predictions);
         double f1Score = mcevaluator.setMetricName("f1").evaluate(predictions);
         
+        System.out.println("F1 score is " + f1Score);
         
-        System.out.println("Test Accuracy = " + accuracy);
-        System.out.println("Test F1 Score = " + f1Score);
-        
+        System.out.println("Accuracy is " + accuracy);
+
         try {
             model.write().overwrite().save(outputPath);
         } catch (IOException e) {
